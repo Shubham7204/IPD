@@ -19,7 +19,8 @@ interface Post {
   id: string;
   title: string;
   content: string;
-  image_url: string;
+  media_url: string;
+  media_type: 'image' | 'video';
   created_at: string;
   profiles: {
     username: string;
@@ -27,6 +28,8 @@ interface Post {
   comments: Comment[];
   likes?: string[];
 }
+
+const API_URL = 'http://localhost:3000';
 
 export default function PostDetails() {
   const { id } = useParams<{ id: string }>();
@@ -121,11 +124,25 @@ export default function PostDetails() {
           className="max-w-4xl mx-auto bg-white rounded-3xl overflow-hidden border-2 border-[#151616] shadow-[4px_4px_0px_0px_#151616]"
         >
           <div className="relative h-96">
-            <img
-              src={post.image_url}
-              alt={post.title}
-              className="w-full h-full object-cover"
-            />
+            {post.media_type === 'image' ? (
+              <img
+                src={post.media_url.startsWith('http') 
+                  ? post.media_url 
+                  : `${API_URL}${post.media_url}`}
+                alt={post.title}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <video
+                src={post.media_url.startsWith('http') 
+                  ? post.media_url 
+                  : `${API_URL}${post.media_url}`}
+                controls
+                className="w-full h-full object-cover"
+              >
+                Your browser does not support the video tag.
+              </video>
+            )}
             <div className="absolute top-4 right-4 text-sm font-bold text-white bg-[#151616]/50 px-4 py-2 rounded-full">
               {new Date(post.created_at).toLocaleDateString()}
             </div>

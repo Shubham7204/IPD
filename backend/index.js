@@ -4,6 +4,8 @@ const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const zod = require("zod");
 require('dotenv').config();
+const path = require('path');
+const fs = require('fs');
 
 // Import db connection
 require('./db');
@@ -15,6 +17,15 @@ const authMiddleware = require('./middleware/auth');
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Create uploads directory if it doesn't exist
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)){
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Serve static files from the uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // SIGNUP ROUTE //
 
@@ -109,7 +120,6 @@ app.use('/api/posts', postRoutes);
 
 
 const multer = require("multer");
-const fs = require('fs');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // Configure multer for file upload

@@ -33,7 +33,7 @@ export default function CreatePost() {
     }
 
     if (!file) {
-      setError('Please select an image');
+      setError('Please select an image or video');
       return;
     }
 
@@ -42,7 +42,17 @@ export default function CreatePost() {
       const formData = new FormData();
       formData.append('title', title);
       formData.append('content', content);
-      formData.append('image', file);
+      
+      // Determine if it's an image or video and append accordingly
+      if (file.type.startsWith('image/')) {
+        formData.append('image', file);
+      } else if (file.type.startsWith('video/')) {
+        formData.append('video', file);
+      } else {
+        setError('Invalid file type. Please upload an image or video.');
+        return;
+      }
+
       formData.append('author', userId);
 
       const response = await axios.post('http://localhost:3000/api/posts', formData, {
@@ -71,6 +81,12 @@ export default function CreatePost() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
+      // Validate file type
+      if (!selectedFile.type.startsWith('image/') && !selectedFile.type.startsWith('video/')) {
+        setError('Please select an image or video file');
+        return;
+      }
+      
       setFile(selectedFile);
       const reader = new FileReader();
       reader.onload = () => {
@@ -134,7 +150,7 @@ export default function CreatePost() {
                 <div className="relative">
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/*,video/*"
                     onChange={handleFileChange}
                     className="hidden"
                     id="image-upload"
@@ -144,16 +160,29 @@ export default function CreatePost() {
                     className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-[#151616] rounded-lg cursor-pointer hover:bg-[#D6F32F]/10 transition-colors"
                   >
                     <ImageIcon className="w-8 h-8 mb-2 text-gray-500" />
-                    <span className="text-sm text-gray-500">Click to upload an image</span>
+                    <span className="text-sm text-gray-500">Click to upload media</span>
+                    <span className="text-xs text-gray-400 mt-1">
+                      Supported formats: JPG, PNG, GIF, MP4
+                    </span>
                   </label>
                 </div>
               ) : (
                 <div className="relative">
-                  <img
-                    src={previewUrl}
-                    alt="Preview"
-                    className="w-full h-48 object-cover rounded-lg"
-                  />
+                  {file?.type.startsWith('image/') ? (
+                    <img
+                      src={previewUrl}
+                      alt="Preview"
+                      className="w-full h-48 object-cover rounded-lg"
+                    />
+                  ) : (
+                    <video
+                      src={previewUrl}
+                      className="w-full h-48 object-cover rounded-lg"
+                      controls
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  )}
                   <button
                     type="button"
                     onClick={removeImage}

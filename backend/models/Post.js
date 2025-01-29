@@ -10,8 +10,13 @@ const postSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  image_url: {
+  media_url: {
     type: String,
+    required: true
+  },
+  media_type: {
+    type: String,
+    enum: ['image', 'video'],
     required: true
   },
   creator: {
