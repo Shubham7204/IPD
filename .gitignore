@@ -54,5 +54,5 @@ backend/*.tsbuildinfo
 frontend/vite.config.ts.timestamp-*
 
 # Uploaded files
-backend/uploads
+backend/uploads/
 backend/uploads/*

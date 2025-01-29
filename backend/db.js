@@ -38,77 +38,9 @@ const userSchema = new mongoose.Schema({
     },
 }, { timestamps: true });
 
-
-
-
-
-
-
-
-
-
-
-const PurchaseHistorySchema = new mongoose.Schema({
-  userId: { 
-    type: String, 
-    required: true,
-    index: true 
-  },
-  purchaseDate: { 
-    type: Date, 
-    default: Date.now 
-  },
-  purchased: {
-    product: { 
-      type: String, 
-      required: true 
-    },
-    eco_score: { 
-      type: Number, 
-      required: true 
-    },
-    water_usage: { 
-      type: Number, 
-      required: true 
-    },
-    carbon_footprint: { 
-      type: Number, 
-      required: true 
-    },
-    waste_generated: { 
-      type: Number 
-    }
-  },
-  alternative: {
-    product: { 
-      type: String, 
-      required: true 
-    },
-    eco_score: { 
-      type: Number, 
-      required: true 
-    },
-    water_usage: { 
-      type: Number, 
-      required: true 
-    },
-    carbon_footprint: { 
-      type: Number, 
-      required: true 
-    },
-    waste_generated: { 
-      type: Number 
-    }
-  }
-});
-
-
-// PurchaseHistory Model
-const PurchaseHistory = mongoose.model('PurchaseHistory', PurchaseHistorySchema);
-
 // User Model
 const User = mongoose.model('User', userSchema);
 
 module.exports = {
-    User, PurchaseHistory
+    User
 };

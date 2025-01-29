@@ -6,13 +6,9 @@ import {
   Menu,
   X,
   Home,
-  Phone,
-  Info,
   Users,
   Plus,
-  MapPin,
-  Gauge,
-  BrainCircuit
+  Gauge
 } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
 
@@ -74,10 +70,8 @@ const Navbar = () => {
   const navItems = [
     { to: "/", label: "Home", icon: Home },
     { to: "/dashboard", label: "Dashboard", icon: Gauge },
-    { to: "/product-recommendation", label: "Product Recommendation", icon: BrainCircuit },
     { to: "/community", label: "Community", icon: Users },
-    { to: "/create-post", label: "Create Post", icon: Plus },
-    { to: "/store-finder", label: "Store Finder", icon: MapPin }
+    { to: "/create-post", label: "Create Post", icon: Plus }
   ];
 
   return (

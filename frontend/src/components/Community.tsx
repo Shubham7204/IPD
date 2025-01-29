@@ -16,6 +16,17 @@ interface Post {
   };
   likes_count: number;
   comments_count: number;
+  analysis_status: string;
+  deepfake_analysis?: {
+    is_fake: boolean;
+    confidence: number;
+    frames_analysis: {
+      frame: string;
+      confidence: number;
+      is_fake: boolean;
+      frame_path: string;
+    }[];
+  };
 }
 
 const API_URL = 'http://localhost:3000';
@@ -87,6 +98,26 @@ const PostCard: React.FC<{ post: Post; index: number }> = ({ post, index }) => {
                 </div>
               </div>
             </div>
+
+            {post.media_type === 'video' && (
+              <div className={`mb-2 p-2 rounded ${
+                post.analysis_status === 'processing' 
+                  ? 'bg-yellow-100 text-yellow-700'
+                  : post.analysis_status === 'failed'
+                  ? 'bg-red-100 text-red-700'
+                  : post.deepfake_analysis?.is_fake 
+                  ? 'bg-red-100 text-red-700' 
+                  : 'bg-green-100 text-green-700'
+              }`}>
+                {post.analysis_status === 'processing' 
+                  ? '🔄 Analysis in progress...'
+                  : post.analysis_status === 'failed'
+                  ? '❌ Analysis failed'
+                  : post.deepfake_analysis?.is_fake 
+                  ? '⚠️ Potential Deepfake Detected' 
+                  : '✅ No Deepfake Detected'}
+              </div>
+            )}
           </div>
         </motion.div>
       </Link>
@@ -98,6 +129,7 @@ export default function Community() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     async function fetchPosts() {
@@ -121,6 +153,34 @@ export default function Community() {
     }
     fetchPosts();
   }, []);
+
+  useEffect(() => {
+    // Start polling if there are processing videos
+    const processingPosts = posts.some(post => 
+      post.media_type === 'video' && post.analysis_status === 'processing'
+    );
+
+    if (processingPosts && !pollInterval) {
+      const interval = setInterval(async () => {
+        const data = await api.getPosts();
+        setPosts(data);
+        
+        // Stop polling if no more processing videos
+        if (!data.some(post => post.analysis_status === 'processing')) {
+          clearInterval(interval);
+          setPollInterval(null);
+        }
+      }, 5000); // Poll every 5 seconds
+      
+      setPollInterval(interval);
+    }
+
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
+  }, [posts]);
 
   if (loading) {
     return (

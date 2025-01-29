@@ -1,12 +1,12 @@
-import TransactionHistoryPage from "./TransactionHistoryPage"
-import EnvironmentalImpactPage from "./EnvironmentalImpactPage"
+import React from "react";
+import UserPosts from "../components/UserPosts";
+
 const Dashboard = () => {
   return (
-    <div>
-      <TransactionHistoryPage/>
-      <EnvironmentalImpactPage/>
+    <div className="min-h-screen bg-[#ffffff]">
+      <UserPosts />
     </div>
-  )
-}
+  );
+};
 
-export default Dashboard
+export default Dashboard;

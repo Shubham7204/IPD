@@ -42,7 +42,18 @@ const postSchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     }
-  }]
+  }],
+  analysis_status: {
+    type: String,
+    enum: ['none', 'processing', 'completed', 'failed'],
+    default: 'none'
+  },
+  deepfake_analysis: {
+    frames_analysis: [{
+      frame: String,
+      frame_path: String
+    }]
+  }
 }, { 
   timestamps: true,
   toJSON: { virtuals: true },

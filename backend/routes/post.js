@@ -6,6 +6,10 @@ const cloudinary = require('cloudinary').v2;
 const fileUpload = require('express-fileupload');
 const fs = require('fs');
 const path = require('path');
+const DeepfakeDetector = require('../services/deepfakeDetector');
+const detector = new DeepfakeDetector();
+const axios = require('axios');
+const { extractFrames } = require('../services/videoProcessor'); // Import the video processor
 
 // Configure Cloudinary
 cloudinary.config({
@@ -66,6 +70,8 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Post not found' });
     }
 
+    console.log('Raw post from DB:', post); // Debug log
+
     // Transform data to match frontend expectations
     const transformedPost = {
       id: post._id,
@@ -74,21 +80,22 @@ router.get('/:id', async (req, res) => {
       media_url: post.media_url,
       media_type: post.media_type,
       created_at: post.createdAt,
+      analysis_status: post.analysis_status,
+      deepfake_analysis: post.deepfake_analysis ? {
+        frames_analysis: post.deepfake_analysis.frames_analysis.map(frame => ({
+          frame: frame.frame,
+          frame_path: frame.frame_path
+        }))
+      } : null,
       profiles: {
         username: post.creator.username
-      },
-      comments: post.comments.map(comment => ({
-        id: comment._id,
-        content: comment.content,
-        created_at: comment.createdAt,
-        profiles: {
-          username: comment.user.username
-        }
-      }))
+      }
     };
 
+    console.log('Transformed post:', transformedPost); // Debug log
     res.json(transformedPost);
   } catch (error) {
+    console.error('Error fetching post:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -96,9 +103,6 @@ router.get('/:id', async (req, res) => {
 // Create post
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    console.log('Request body:', req.body);
-    console.log('Request files:', req.files);
-
     if (!req.files || (!req.files.image && !req.files.video)) {
       return res.status(400).json({ message: 'No media file uploaded' });
     }
@@ -117,7 +121,6 @@ router.post('/', authMiddleware, async (req, res) => {
       });
     }
 
-    // Generate unique filename with original extension
     const fileExt = path.extname(mediaFile.name);
     const fileName = `${Date.now()}-${Math.round(Math.random() * 1E9)}${fileExt}`;
     const uploadPath = path.join(__dirname, '../uploads', fileName);
@@ -128,24 +131,59 @@ router.post('/', authMiddleware, async (req, res) => {
         fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
-    // Move the file to the uploads directory
+    // Create post first
+    const post = new Post({
+      title: req.body.title,
+      content: req.body.content,
+      media_url: `/uploads/${fileName}`,
+      media_type: mediaType,
+      creator: req.user.id,
+      analysis_status: mediaType === 'video' ? 'processing' : 'none'
+    });
+
+    await post.save();
+
+    // Move the file and process video asynchronously
     mediaFile.mv(uploadPath, async (err) => {
       if (err) {
         console.error('Error saving media:', err);
-        return res.status(500).json({ message: 'Error saving media file' });
+        post.analysis_status = 'failed';
+        await post.save();
+        return;
       }
 
-      const post = new Post({
-        title: req.body.title,
-        content: req.body.content,
-        media_url: `/uploads/${fileName}`,
-        media_type: mediaType,
-        creator: req.user.id
-      });
-
-      await post.save();
-      res.status(201).json(post);
+      if (mediaType === 'video') {
+        console.log('Processing video:', uploadPath);
+        
+        try {
+          const frames = await extractFrames(uploadPath);
+          
+          // Update the post with frame analysis
+          const updatedPost = await Post.findByIdAndUpdate(
+            post._id,
+            {
+              $set: {
+                deepfake_analysis: {
+                  frames_analysis: frames
+                },
+                analysis_status: 'completed'
+              }
+            },
+            { new: true }
+          );
+          
+          console.log('Updated post in MongoDB:', updatedPost);
+        } catch (error) {
+          console.error('Error processing video:', error);
+          await Post.findByIdAndUpdate(post._id, {
+            $set: { analysis_status: 'failed' }
+          });
+        }
+      }
     });
+
+    // Respond immediately with the post
+    res.status(201).json(post);
   } catch (error) {
     console.error('Error creating post:', error);
     res.status(500).json({ message: error.message });
@@ -209,6 +247,34 @@ router.post('/:id/like', authMiddleware, async (req, res) => {
     await post.save();
     res.json({ likes: post.likes.length });
   } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get user's posts
+router.get('/user/posts', authMiddleware, async (req, res) => {
+  try {
+    const posts = await Post.find({ creator: req.user.id })
+      .populate('creator', 'username')
+      .sort('-createdAt');
+
+    const transformedPosts = posts.map(post => ({
+      id: post._id,
+      title: post.title,
+      content: post.content,
+      media_url: post.media_url,
+      media_type: post.media_type,
+      created_at: post.createdAt,
+      analysis_status: post.analysis_status,
+      deepfake_analysis: post.deepfake_analysis,
+      profiles: {
+        username: post.creator.username
+      }
+    }));
+
+    res.json(transformedPosts);
+  } catch (error) {
+    console.error('Error fetching user posts:', error);
     res.status(500).json({ message: error.message });
   }
 });
