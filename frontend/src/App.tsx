@@ -8,6 +8,7 @@ import CreatePost from './components/CreatePost';
 import PostDetails from './components/PostDetails';
 import Community from './components/Community';
 import FrameAnalysis from './pages/FrameAnalysis';
+import PostAnalysis from './pages/PostAnalysis';
 
 const App = () => {
   const isLoggedIn = !!localStorage.getItem('token');
@@ -28,7 +29,7 @@ const App = () => {
             <Route path="/create-post" element={<CreatePost />} />
             <Route path="/posts/:id" element={<PostDetails />} />
             <Route path="/community" element={<Community />} />
-            <Route path="/posts/:postId/analysis" element={<FrameAnalysis />} />
+            <Route path="/posts/:postId/analysis" element={<PostAnalysis />} />
           </Routes>
         </main>
         <Footer />

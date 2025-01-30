@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 interface Frame {
   frame: string;
   frame_path: string;
+  confidence: number;
+  is_fake: boolean;
 }
 
 interface Post {
@@ -16,6 +19,8 @@ interface Post {
   analysis_status: string;
   deepfake_analysis?: {
     frames_analysis: Frame[];
+    confidence: number;
+    is_fake: boolean;
   };
 }
 
@@ -26,27 +31,30 @@ export default function VideoAnalysisDashboard() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
+
+  // Memoize the fetch function
+  const fetchUserPosts = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API_URL}/api/posts/user/posts`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await response.json();
+      console.log('Fetched posts:', data);
+      setPosts(data.filter(post => post.media_type === 'video'));
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    async function fetchUserPosts() {
-      try {
-        setIsLoading(true);
-        const response = await fetch(`${API_URL}/api/posts/user/posts`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        const data = await response.json();
-        console.log('Fetched posts:', data);
-        setPosts(data.filter(post => post.media_type === 'video'));
-      } catch (error) {
-        console.error('Error fetching posts:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
     fetchUserPosts();
-  }, []);
+  }, [fetchUserPosts]);
 
   const handleOpenModal = (post: Post) => {
     setSelectedPost(post);
@@ -56,6 +64,49 @@ export default function VideoAnalysisDashboard() {
   const handleCloseModal = () => {
     setShowModal(false);
     setTimeout(() => setSelectedPost(null), 200); // Clear selected post after animation
+  };
+
+  const handleAnalyze = async (postId: string) => {
+    try {
+      const response = await fetch(`${API_URL}/api/posts/analyze/${postId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) throw new Error('Analysis failed');
+      
+      const updatedPost = await response.json();
+      setPosts(posts.map(p => p.id === postId ? updatedPost : p));
+    } catch (error) {
+      console.error('Error analyzing frames:', error);
+    }
+  };
+
+  const handleImageLoad = (imagePath: string) => {
+    setLoadedImages(prev => new Set(prev).add(imagePath));
+  };
+
+  const handleImageError = (imagePath: string) => {
+    console.error(`Error loading image: ${imagePath}`);
+  };
+
+  // Add the same helper function
+  const determineVideoStatus = (frames: Frame[]) => {
+    const realFrames = frames.filter(f => !f.is_fake).length;
+    const fakeFrames = frames.filter(f => f.is_fake).length;
+    // Calculate average confidence
+    const totalConfidence = frames.reduce((sum, frame) => sum + frame.confidence, 0);
+    const averageConfidence = totalConfidence / frames.length;
+    
+    return {
+      isReal: realFrames >= fakeFrames,
+      realCount: realFrames,
+      fakeCount: fakeFrames,
+      totalFrames: frames.length,
+      confidence: averageConfidence
+    };
   };
 
   if (isLoading) {
@@ -68,7 +119,7 @@ export default function VideoAnalysisDashboard() {
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6">Video Frames</h2>
+      <h2 className="text-2xl font-bold mb-6">Video Analysis</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {posts.map(post => (
@@ -80,20 +131,69 @@ export default function VideoAnalysisDashboard() {
             />
             <h3 className="font-semibold mb-2">{post.title}</h3>
             
-            {post.analysis_status === 'processing' ? (
-              <div className="flex items-center space-x-2">
+            {post.analysis_status === 'none' ? (
+              <button
+                onClick={() => handleAnalyze(post.id)}
+                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition-colors w-full"
+              >
+                Analyze Video
+              </button>
+            ) : post.analysis_status === 'processing' ? (
+              <div className="flex items-center justify-center space-x-2 py-2">
                 <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
                 <span>Processing...</span>
               </div>
             ) : post.analysis_status === 'completed' && post.deepfake_analysis ? (
-              <button
-                onClick={() => handleOpenModal(post)}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition-colors"
-              >
-                View Frames ({post.deepfake_analysis.frames_analysis.length})
-              </button>
+              <div className="space-y-4">
+                {/* Status */}
+                {(() => {
+                  const status = determineVideoStatus(post.deepfake_analysis.frames_analysis);
+                  return (
+                    <div className={`text-lg font-bold ${
+                      status.isReal ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {status.isReal ? 'REAL' : 'FAKE'} 
+                      ({status.realCount}/{status.totalFrames} real frames)
+                    </div>
+                  );
+                })()}
+                
+                {/* Preview first few frames */}
+                <div className="grid grid-cols-3 gap-2">
+                  {post.deepfake_analysis.frames_analysis.slice(0, 3).map((frame, index) => {
+                    const imagePath = `${API_URL}${frame.frame_path}`;
+                    const isLoaded = loadedImages.has(imagePath);
+
+                    return (
+                      <div key={index} className="relative aspect-video bg-gray-100">
+                        {!isLoaded && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                          </div>
+                        )}
+                        <img 
+                          src={imagePath}
+                          alt={`Frame ${index + 1}`}
+                          className={`w-full h-full object-cover rounded transition-opacity duration-200 ${
+                            isLoaded ? 'opacity-100' : 'opacity-0'
+                          }`}
+                          onLoad={() => handleImageLoad(imagePath)}
+                          onError={() => handleImageError(imagePath)}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                <Link
+                  to={`/posts/${post.id}/analysis`}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition-colors block text-center"
+                >
+                  View Full Analysis ({post.deepfake_analysis.frames_analysis.length} frames)
+                </Link>
+              </div>
             ) : (
-              <div className="text-gray-500">No frames available</div>
+              <div className="text-red-500 text-center py-2">Analysis failed</div>
             )}
           </div>
         ))}
@@ -121,28 +221,45 @@ export default function VideoAnalysisDashboard() {
                   </button>
                 </div>
                 
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {selectedPost.deepfake_analysis.frames_analysis.map((frame, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="bg-gray-50 rounded-lg overflow-hidden border border-gray-200"
-                    >
-                      <div className="relative pt-[75%]">
-                        <img 
-                          src={`${API_URL}${frame.frame_path}`}
-                          alt={`Frame ${index + 1}`}
-                          className="absolute inset-0 w-full h-full object-cover"
-                          onError={(e) => console.error(`Error loading frame: ${API_URL}${frame.frame_path}`)}
-                        />
+                <div className="mb-6">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="text-lg font-semibold mb-2">Analysis Summary</h4>
+                    <div className="flex items-center space-x-4">
+                      <div className={`text-lg font-bold ${
+                        selectedPost.deepfake_analysis.is_fake ? 'text-red-600' : 'text-green-600'
+                      }`}>
+                        {selectedPost.deepfake_analysis.is_fake ? 'FAKE' : 'REAL'}
                       </div>
-                      <div className="p-2 text-center text-sm text-gray-600">
-                        Frame {index + 1}
+                      <div className="text-gray-600">
+                        Overall Confidence: {(status.confidence * 100).toFixed(1)}%
                       </div>
-                    </motion.div>
-                  ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="min-w-full bg-white border">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="px-4 py-2 text-left">Frame</th>
+                        <th className="px-4 py-2 text-left">Confidence</th>
+                        <th className="px-4 py-2 text-left">Result</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedPost.deepfake_analysis.frames_analysis.map((frame, index) => (
+                        <tr key={index} className="border-t">
+                          <td className="px-4 py-2">Frame {index + 1}</td>
+                          <td className="px-4 py-2">{(frame.confidence * 100).toFixed(1)}%</td>
+                          <td className={`px-4 py-2 font-medium ${
+                            frame.is_fake ? 'text-red-600' : 'text-green-600'
+                          }`}>
+                            {frame.is_fake ? 'FAKE' : 'REAL'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </motion.div>
             </div>

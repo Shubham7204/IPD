@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const DeepfakeDetector = require('../services/deepfakeDetector');
 const detector = new DeepfakeDetector();
+const axios = require('axios');
 
 // Configure file upload middleware with file size limit
 router.use(fileUpload({
@@ -50,19 +51,15 @@ router.get('/', async (req, res) => {
 });
 
 // Get single post
-router.get('/:id', async (req, res) => {
+router.get('/:id', authMiddleware, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id)
-      .populate('creator', 'username')
-      .populate('comments.user', 'username');
+      .populate('creator', 'username');
 
     if (!post) {
       return res.status(404).json({ message: 'Post not found' });
     }
 
-    console.log('Raw post from DB:', post); // Debug log
-
-    // Transform data to match frontend expectations
     const transformedPost = {
       id: post._id,
       title: post.title,
@@ -72,17 +69,15 @@ router.get('/:id', async (req, res) => {
       created_at: post.createdAt,
       analysis_status: post.analysis_status,
       deepfake_analysis: post.deepfake_analysis ? {
-        frames_analysis: post.deepfake_analysis.frames_analysis.map(frame => ({
-          frame: frame.frame,
-          frame_path: frame.frame_path
-        }))
+        is_fake: post.deepfake_analysis.is_fake,
+        confidence: post.deepfake_analysis.confidence,
+        frames_analysis: post.deepfake_analysis.frames_analysis
       } : null,
       profiles: {
         username: post.creator.username
       }
     };
 
-    console.log('Transformed post:', transformedPost); // Debug log
     res.json(transformedPost);
   } catch (error) {
     console.error('Error fetching post:', error);
@@ -269,6 +264,46 @@ router.get('/user/posts', authMiddleware, async (req, res) => {
     res.json(transformedPosts);
   } catch (error) {
     console.error('Error fetching user posts:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Add a new route for analyzing frames
+router.post('/analyze/:postId', authMiddleware, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.postId);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    // Get frames directory name from the post
+    const videoFileName = path.basename(post.media_url);
+    const framesDir = `frames_${path.parse(videoFileName).name}`;
+
+    // Call Flask server to analyze frames
+    const response = await axios.post('http://localhost:5000/analyze-frames', {
+      frames_dir: framesDir
+    });
+
+    // Update post with analysis results
+    const updatedPost = await Post.findByIdAndUpdate(
+      post._id,
+      {
+        $set: {
+          deepfake_analysis: {
+            frames_analysis: response.data.frames_analysis,
+            confidence: response.data.confidence,
+            is_fake: response.data.is_fake
+          },
+          analysis_status: 'completed'
+        }
+      },
+      { new: true }
+    );
+
+    res.json(updatedPost);
+  } catch (error) {
+    console.error('Error analyzing frames:', error);
     res.status(500).json({ message: error.message });
   }
 });
