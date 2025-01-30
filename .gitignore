@@ -56,3 +56,9 @@ frontend/vite.config.ts.timestamp-*
 # Uploaded files
 backend/uploads/
 backend/uploads/*
+
+backend/flask_server/uploads/
+backend/flask_server/uploads/*
+backend/flask_server/frames/
+backend/flask_server/frames/*   
+

@@ -49,8 +49,12 @@ const postSchema = new mongoose.Schema({
     default: 'none'
   },
   deepfake_analysis: {
+    is_fake: Boolean,
+    confidence: Number,
     frames_analysis: [{
       frame: String,
+      confidence: Number,
+      is_fake: Boolean,
       frame_path: String
     }]
   }

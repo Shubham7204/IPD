@@ -2,21 +2,11 @@ const express = require('express');
 const router = express.Router();
 const Post = require('../models/Post');
 const authMiddleware = require('../middleware/auth');
-const cloudinary = require('cloudinary').v2;
 const fileUpload = require('express-fileupload');
 const fs = require('fs');
 const path = require('path');
 const DeepfakeDetector = require('../services/deepfakeDetector');
 const detector = new DeepfakeDetector();
-const axios = require('axios');
-const { extractFrames } = require('../services/videoProcessor'); // Import the video processor
-
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
 
 // Configure file upload middleware with file size limit
 router.use(fileUpload({
@@ -131,7 +121,7 @@ router.post('/', authMiddleware, async (req, res) => {
         fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
-    // Create post first
+    // Create post
     const post = new Post({
       title: req.body.title,
       content: req.body.content,
@@ -156,15 +146,15 @@ router.post('/', authMiddleware, async (req, res) => {
         console.log('Processing video:', uploadPath);
         
         try {
-          const frames = await extractFrames(uploadPath);
-          
-          // Update the post with frame analysis
+          const analysisResult = await detector.analyze_video(uploadPath);
+          console.log('Analysis result:', analysisResult);
+
           const updatedPost = await Post.findByIdAndUpdate(
             post._id,
             {
               $set: {
                 deepfake_analysis: {
-                  frames_analysis: frames
+                  frames_analysis: analysisResult.frames_analysis
                 },
                 analysis_status: 'completed'
               }
@@ -172,7 +162,7 @@ router.post('/', authMiddleware, async (req, res) => {
             { new: true }
           );
           
-          console.log('Updated post in MongoDB:', updatedPost);
+          console.log('Updated post with frames:', updatedPost);
         } catch (error) {
           console.error('Error processing video:', error);
           await Post.findByIdAndUpdate(post._id, {
@@ -182,7 +172,6 @@ router.post('/', authMiddleware, async (req, res) => {
       }
     });
 
-    // Respond immediately with the post
     res.status(201).json(post);
   } catch (error) {
     console.error('Error creating post:', error);
@@ -266,12 +255,17 @@ router.get('/user/posts', authMiddleware, async (req, res) => {
       media_type: post.media_type,
       created_at: post.createdAt,
       analysis_status: post.analysis_status,
-      deepfake_analysis: post.deepfake_analysis,
+      deepfake_analysis: post.deepfake_analysis ? {
+        is_fake: post.deepfake_analysis.is_fake,
+        confidence: post.deepfake_analysis.confidence,
+        frames_analysis: post.deepfake_analysis.frames_analysis
+      } : null,
       profiles: {
         username: post.creator.username
       }
     }));
 
+    console.log('Transformed posts with frames:', transformedPosts); // Debug log
     res.json(transformedPosts);
   } catch (error) {
     console.error('Error fetching user posts:', error);

@@ -27,6 +27,9 @@ if (!fs.existsSync(uploadsDir)) {
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Serve frames from the frames directory
+app.use('/uploads/frames', express.static(path.join(__dirname, 'flask_server/frames')));
+
 // SIGNUP ROUTE //
 const signupBody = zod.object({
     username: zod.string().email(),
