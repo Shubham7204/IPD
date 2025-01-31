@@ -48,20 +48,45 @@ export default function PostDetails() {
       if (!id) return;
       try {
         setLoading(true);
-        const data = await api.getPost(id);
+        console.log('Fetching post with ID:', id);
+        
+        // Try to fetch from Supabase first
+        const response = await fetch(`${API_URL}/api/posts/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch post: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('Fetched post data:', data);
+        
+        if (!data) {
+          throw new Error('No data received');
+        }
+        
+        // Update state with the fetched data
         setPost(data);
         setComments(data.comments || []);
-        setLikesCount(data.likes?.length || 0);
-        setIsLiked(data.likes?.includes(session?.user.id));
+        setLikesCount(data.likes_count || 0);
+        setIsLiked(data.likes?.includes(session?.user?.id));
+        setError(''); // Clear any previous errors
       } catch (error) {
         console.error('Error fetching post:', error);
-        navigate('/');
+        setError('Failed to load post. Please try again later.');
       } finally {
         setLoading(false);
       }
     }
-    fetchPost();
-  }, [id, session?.user.id]);
+    
+    if (id) {
+      fetchPost();
+    }
+  }, [id, session?.user?.id]);
 
   const handleLike = async () => {
     if (!session) {
@@ -70,8 +95,14 @@ export default function PostDetails() {
     }
 
     try {
-      const { likes } = await api.toggleLike(id!);
-      setLikesCount(likes);
+      const response = await fetch(`${API_URL}/api/posts/${id}/like`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await response.json();
+      setLikesCount(data.likes_count);
       setIsLiked(!isLiked);
     } catch (error) {
       console.error('Error toggling like:', error);
@@ -86,7 +117,15 @@ export default function PostDetails() {
     }
 
     try {
-      const newCommentData = await api.addComment(id!, newComment);
+      const response = await fetch(`${API_URL}/api/posts/${id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ content: newComment })
+      });
+      const newCommentData = await response.json();
       setComments([newCommentData, ...comments]);
       setNewComment('');
     } catch (error) {
@@ -102,7 +141,21 @@ export default function PostDetails() {
     );
   }
 
-  if (!post) return null;
+  if (error) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-red-500">{error}</div>
+      </div>
+    );
+  }
+
+  if (!post) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-gray-500">Post not found</div>
+      </div>
+    );
+  }
 
   return (
     <section className="py-24 bg-[#ffffff] relative overflow-hidden mt-16">
@@ -197,6 +250,7 @@ export default function PostDetails() {
                     <button
                       type="submit"
                       className="bg-[#D6F32F] px-6 rounded-xl font-bold text-[#151616] border-2 border-[#151616] shadow-[4px_4px_0px_0px_#151616] hover:shadow-[2px_2px_0px_0px_#151616] hover:translate-y-[2px] hover:translate-x-[2px] transition-all duration-200"
+                      aria-label="Send comment"
                     >
                       <Send className="w-5 h-5" />
                     </button>

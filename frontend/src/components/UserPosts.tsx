@@ -86,26 +86,6 @@ const PostCard: React.FC<{ post: Post; index: number }> = ({ post, index }) => {
             <h2 className="text-xl font-bold text-[#151616] mb-3">{post.title}</h2>
             <p className="text-[#151616]/70 mb-4 line-clamp-2">{post.content}</p>
             
-            {post.media_type === 'video' && (
-              <div className={`mb-4 p-2 rounded ${
-                post.analysis_status === 'processing' 
-                  ? 'bg-yellow-100 text-yellow-700'
-                  : post.analysis_status === 'failed'
-                  ? 'bg-red-100 text-red-700'
-                  : post.deepfake_analysis?.is_fake 
-                  ? 'bg-red-100 text-red-700' 
-                  : 'bg-green-100 text-green-700'
-              }`}>
-                {post.analysis_status === 'processing' 
-                  ? '🔄 Analysis in progress...'
-                  : post.analysis_status === 'failed'
-                  ? '❌ Analysis failed'
-                  : post.deepfake_analysis?.is_fake 
-                  ? '⚠️ Potential Deepfake Detected' 
-                  : '✅ No Deepfake Detected'}
-              </div>
-            )}
-            
             <div className="flex items-center justify-between">
               <div className="text-sm text-[#151616]/70">
                 Posted by {post.profiles?.username || 'Anonymous'}

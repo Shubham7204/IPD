@@ -98,26 +98,6 @@ const PostCard: React.FC<{ post: Post; index: number }> = ({ post, index }) => {
                 </div>
               </div>
             </div>
-
-            {post.media_type === 'video' && (
-              <div className={`mb-2 p-2 rounded ${
-                post.analysis_status === 'processing' 
-                  ? 'bg-yellow-100 text-yellow-700'
-                  : post.analysis_status === 'failed'
-                  ? 'bg-red-100 text-red-700'
-                  : post.deepfake_analysis?.is_fake 
-                  ? 'bg-red-100 text-red-700' 
-                  : 'bg-green-100 text-green-700'
-              }`}>
-                {post.analysis_status === 'processing' 
-                  ? '🔄 Analysis in progress...'
-                  : post.analysis_status === 'failed'
-                  ? '❌ Analysis failed'
-                  : post.deepfake_analysis?.is_fake 
-                  ? '⚠️ Potential Deepfake Detected' 
-                  : '✅ No Deepfake Detected'}
-              </div>
-            )}
           </div>
         </motion.div>
       </Link>
