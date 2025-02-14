@@ -91,7 +91,7 @@ def extract_frames(video_path, frames_dir):
     while success:
         success, image = vidObj.read()
         if not success:
-            break
+                break
             
         frames_num = 20  # Save every 20th frame
         if count % frames_num == 0:

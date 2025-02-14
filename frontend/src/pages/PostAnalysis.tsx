@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FrameErrorBoundary } from '../components/FrameErrorBoundary';
+import { Shield, AlertTriangle, CheckCircle, BarChart2, Film, Percent, Video, ImageOff } from 'lucide-react';
 
 interface Frame {
   frame: string;
@@ -30,89 +30,72 @@ interface Post {
       fake_frames: number;
     };
   };
+  profiles?: {
+    username: string;
+  };
 }
 
 const API_URL = 'http://localhost:3000';
+const FLASK_URL = 'http://localhost:5000';
 
 export default function PostAnalysis() {
   const { postId } = useParams();
   const [post, setPost] = useState<Post | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchPost() {
+    const fetchPost = async () => {
       try {
+        setIsLoading(true);
+        setError(null);
         const response = await fetch(`${API_URL}/api/posts/${postId}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
         });
-        if (!response.ok) throw new Error('Failed to fetch post');
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch post data');
+        }
+        
         const data = await response.json();
         setPost(data);
       } catch (error) {
         console.error('Error fetching post:', error);
+        setError('Failed to load post data. Please try again later.');
       } finally {
         setIsLoading(false);
       }
-    }
+    };
+
     fetchPost();
   }, [postId]);
 
-  const renderFrameGrid = () => {
-    if (!post?.deepfake_analysis?.frames_analysis) return null;
+  const handleImageLoad = (imagePath: string) => {
+    setLoadedImages(prev => new Set(prev).add(imagePath));
+    setFailedImages(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(imagePath);
+      return newSet;
+    });
+  };
 
-    return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {post.deepfake_analysis.frames_analysis.map((frame, index) => {
-                // Use the frame_path directly since it now includes the full path
-                const frameUrl = `http://localhost:5000${frame.frame_path}`;
-                console.log(`Loading frame: ${frameUrl}`); // Debug log
-                
-                return (
-                    <FrameErrorBoundary key={index}>
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden"
-                        >
-                            <div className="absolute inset-0">
-                                <img 
-                                    src={frameUrl}
-                                    alt={`Frame ${index + 1}`}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                        console.error(`Error loading frame: ${frameUrl}`);
-                                        const target = e.target as HTMLImageElement;
-                                        target.style.display = 'none';
-                                        const placeholder = document.createElement('div');
-                                        placeholder.className = 'absolute inset-0 flex items-center justify-center bg-gray-100';
-                                        placeholder.innerHTML = '<div class="text-gray-400">Failed to load</div>';
-                                        target.parentNode?.appendChild(placeholder);
-                                    }}
-                                    loading="lazy"
-                                />
-                            </div>
-                            <div className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-bold ${
-                                frame.is_fake 
-                                    ? 'bg-red-500 text-white' 
-                                    : 'bg-green-500 text-white'
-                            }`}>
-                                {frame.is_fake ? 'FAKE' : 'REAL'}
-                            </div>
-                        </motion.div>
-                    </FrameErrorBoundary>
-                );
-            })}
-        </div>
-    );
+  const handleImageError = (imagePath: string) => {
+    console.error(`Failed to load image: ${imagePath}`);
+    setFailedImages(prev => new Set(prev).add(imagePath));
+    setLoadedImages(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(imagePath);
+      return newSet;
+    });
   };
 
   const determineVideoStatus = (frames: Frame[]) => {
     const realFrames = frames.filter(f => !f.is_fake).length;
     const fakeFrames = frames.filter(f => f.is_fake).length;
-    // Calculate average confidence
     const totalConfidence = frames.reduce((sum, frame) => sum + frame.confidence, 0);
     const averageConfidence = totalConfidence / frames.length;
     
@@ -128,87 +111,276 @@ export default function PostAnalysis() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D6F32F]"></div>
       </div>
     );
   }
 
-  if (!post) {
-    return <div className="p-6">Post not found</div>;
+  if (error || !post) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-24 px-4">
+        <div className="max-w-3xl mx-auto text-center">
+          <AlertTriangle className="w-16 h-16 mx-auto mb-4 text-red-500" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            {error || 'Post not found'}
+          </h2>
+          <p className="text-gray-600">Please try again later or contact support if the issue persists.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const status = determineVideoStatus(post.deepfake_analysis?.frames_analysis || []);
+
+  if (!post?.deepfake_analysis?.frames_analysis) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-24 px-4">
+        <div className="max-w-6xl mx-auto text-center">
+          <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">No Analysis Available</h2>
+          <p className="text-gray-600">The analysis for this video is not available or still processing.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4">{post.title}</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <video 
-              src={`${API_URL}${post.media_url}`}
-              className="w-full rounded-lg shadow-lg"
-              controls
-            />
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h2 className="text-2xl font-bold mb-4">Analysis Summary</h2>
-            {post.deepfake_analysis?.summary && (
-              <div className="space-y-4">
-                <div className={`text-2xl font-bold mb-4 ${
-                  post.deepfake_analysis.summary.status === 'REAL' ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  VIDEO IS {post.deepfake_analysis.summary.status}
-                </div>
-                <div className="text-lg mb-2">
-                  Overall Confidence: {post.deepfake_analysis.summary.confidence_percentage}%
-                </div>
-                <div className="text-gray-600 space-y-1">
-                  <div>Total Frames: {post.deepfake_analysis.summary.total_frames}</div>
-                  <div>Real Frames: {post.deepfake_analysis.summary.real_frames}</div>
-                  <div>Fake Frames: {post.deepfake_analysis.summary.fake_frames}</div>
+    <div className="min-h-screen bg-gray-50 pt-24 px-4">
+      <div className="max-w-6xl mx-auto">
+        {/* Header Section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl p-8 shadow-lg border-2 border-[#151616] mb-8"
+        >
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
+            <div className="flex items-center gap-4 mb-4 md:mb-0">
+              <div className="w-12 h-12 bg-[#D6F32F] rounded-xl border-2 border-[#151616] flex items-center justify-center">
+                <Shield className="w-6 h-6 text-[#151616]" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-[#151616]">{post.title}</h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[#151616]/70">Posted by</span>
+                  <span className="font-medium text-[#151616]">@{post.profiles?.username}</span>
+                  <span className="text-[#151616]/70">•</span>
+                  <span className="text-[#151616]/70">
+                    {new Date(post.created_at).toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </span>
                 </div>
               </div>
-            )}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-semibold text-[#151616]">Analysis Results</span>
+              <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                post.analysis_status === 'completed' 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-yellow-100 text-yellow-800'
+              }`}>
+                {post.analysis_status === 'completed' ? 'Completed' : 'Processing'}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {post.deepfake_analysis && (
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold mb-6">Frame-by-Frame Analysis</h2>
-          
-          <div className="mb-8 overflow-x-auto">
-            <table className="min-w-full bg-white border">
+          {/* Analysis Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1 }}
+              className={`p-6 rounded-xl border-2 ${
+                status.isReal ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'
+              }`}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                {status.isReal ? (
+                  <CheckCircle className="w-6 h-6 text-green-500" />
+                ) : (
+                  <AlertTriangle className="w-6 h-6 text-red-500" />
+                )}
+                <h3 className="font-bold">Final Verdict</h3>
+              </div>
+              <p className={`text-2xl font-bold ${
+                status.isReal ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {status.isReal ? 'AUTHENTIC' : 'DEEPFAKE'}
+              </p>
+            </motion.div>
+
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+              className="p-6 rounded-xl border-2 border-[#151616] bg-white"
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <Percent className="w-6 h-6 text-[#151616]" />
+                <h3 className="font-bold">Confidence Score</h3>
+              </div>
+              <p className="text-2xl font-bold text-[#151616]">
+                {(status.confidence * 100).toFixed(1)}%
+              </p>
+            </motion.div>
+
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3 }}
+              className="p-6 rounded-xl border-2 border-[#151616] bg-white"
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <Film className="w-6 h-6 text-[#151616]" />
+                <h3 className="font-bold">Frame Analysis</h3>
+              </div>
+              <p className="text-2xl font-bold text-[#151616]">
+                {status.realCount}/{status.totalFrames}
+                <span className="text-base font-normal text-[#151616]/70 ml-2">real frames</span>
+              </p>
+            </motion.div>
+          </div>
+        </motion.div>
+
+        {/* Video Preview Section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl p-8 shadow-lg border-2 border-[#151616] mb-8"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <Video className="w-6 h-6 text-[#151616]" />
+            <h2 className="text-xl font-bold">Original Video</h2>
+          </div>
+
+          <div className="aspect-video rounded-xl overflow-hidden border-2 border-[#151616] bg-gray-100">
+            <video 
+              src={post.media_url.startsWith('http') ? post.media_url : `${API_URL}${post.media_url}`}
+              className="w-full h-full object-contain"
+              controls
+              onError={(e) => {
+                console.error('Video loading error:', e);
+                setError('Failed to load video');
+              }}
+            />
+          </div>
+        </motion.div>
+
+        {/* Frames Grid Section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl p-8 shadow-lg border-2 border-[#151616] mb-8"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <Film className="w-6 h-6 text-[#151616]" />
+            <h2 className="text-xl font-bold">Analyzed Frames</h2>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {post.deepfake_analysis.frames_analysis.map((frame, index) => {
+              const imagePath = frame.frame_path.startsWith('http') 
+                ? frame.frame_path 
+                : `${FLASK_URL}${frame.frame_path}`;
+              const isLoaded = loadedImages.has(imagePath);
+              const hasFailed = failedImages.has(imagePath);
+
+              return (
+                <div key={index} className="relative">
+                  <div className="aspect-video rounded-xl overflow-hidden border-2 border-[#151616] bg-gray-100">
+                    {!isLoaded && !hasFailed && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-6 h-6 border-2 border-[#D6F32F] border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
+                    {hasFailed ? (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100">
+                        <ImageOff className="w-8 h-8 text-gray-400 mb-2" />
+                        <span className="text-sm text-gray-500">Failed to load frame</span>
+                      </div>
+                    ) : (
+                      <img
+                        src={imagePath}
+                        alt={`Frame ${index + 1}`}
+                        className={`w-full h-full object-cover transition-opacity duration-200 ${
+                          isLoaded ? 'opacity-100' : 'opacity-0'
+                        }`}
+                        onLoad={() => handleImageLoad(imagePath)}
+                        onError={() => handleImageError(imagePath)}
+                      />
+                    )}
+                  </div>
+                  <div className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-bold ${
+                    frame.is_fake 
+                      ? 'bg-red-500 text-white' 
+                      : 'bg-green-500 text-white'
+                  }`}>
+                    {frame.is_fake ? 'FAKE' : 'REAL'}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+
+        {/* Frames Analysis Table */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="bg-white rounded-2xl p-8 shadow-lg border-2 border-[#151616]"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <BarChart2 className="w-6 h-6 text-[#151616]" />
+            <h2 className="text-xl font-bold">Detailed Frame Analysis</h2>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
               <thead>
-                <tr className="bg-gray-100">
-                  <th className="px-4 py-2 text-left">Frame</th>
-                  <th className="px-4 py-2 text-left">Confidence</th>
-                  <th className="px-4 py-2 text-left">Result</th>
+                <tr className="border-b-2 border-[#151616]/10">
+                  <th className="px-4 py-3 text-left">Frame</th>
+                  <th className="px-4 py-3 text-left">Result</th>
+                  <th className="px-4 py-3 text-left">Confidence</th>
+                  <th className="px-4 py-3 text-left">Preview</th>
                 </tr>
               </thead>
               <tbody>
                 {post.deepfake_analysis.frames_analysis.map((frame, index) => (
-                  <tr key={index} className="border-t hover:bg-gray-50">
-                    <td className="px-4 py-2">Frame {index + 1}</td>
-                    <td className="px-4 py-2">
-                      {isNaN(frame.confidence) ? '0.0' : (frame.confidence * 100).toFixed(1)}%
+                  <tr key={index} className="border-b border-[#151616]/10">
+                    <td className="px-4 py-3">Frame {index + 1}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                        frame.is_fake 
+                          ? 'bg-red-100 text-red-700' 
+                          : 'bg-green-100 text-green-700'
+                      }`}>
+                        {frame.is_fake ? 'FAKE' : 'REAL'}
+                      </span>
                     </td>
-                    <td className={`px-4 py-2 font-medium ${
-                      frame.is_fake ? 'text-red-600' : 'text-green-600'
-                    }`}>
-                      {frame.is_fake ? 'FAKE' : 'REAL'}
+                    <td className="px-4 py-3">
+                      {(frame.confidence * 100).toFixed(1)}%
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="w-24 h-16 rounded-lg overflow-hidden border border-[#151616]/10">
+                        <img 
+                          src={frame.frame_path.startsWith('http') 
+                            ? frame.frame_path 
+                            : `${FLASK_URL}${frame.frame_path}`}
+                          alt={`Frame ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-
-          <div className="mt-8">
-            <h3 className="text-xl font-semibold mb-4">Extracted Frames</h3>
-            {renderFrameGrid()}
-          </div>
-        </div>
-      )}
+        </motion.div>
+      </div>
     </div>
   );
 } 
