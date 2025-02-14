@@ -153,8 +153,7 @@ const Footer = () => {
           <div className="flex items-center gap-2 text-sm text-[#151616]/70">
             <span>© 2024 DeepSeek. All rights reserved.</span>
             <span className="flex items-center gap-1">
-              Made with <Heart className="w-4 h-4 text-[#D6F32F]" /> by Team
-              DedSec
+              Made with <Heart className="w-4 h-4 text-[#D6F32F]" /> by Shubham
             </span>
           </div>
 

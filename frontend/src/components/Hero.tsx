@@ -159,7 +159,7 @@ const Hero = () => {
           <h1 className="text-5xl md:text-6xl font-black text-[#151616] mb-4">
             Detect Deepfakes with
             <div className="relative inline-block px-2">
-              AI Precision
+              DeepSeek
               <motion.div
                 className="absolute inset-0 bg-[#D6F32F]/40 -rotate-2"
                 initial={{ width: 0 }}
@@ -171,7 +171,7 @@ const Hero = () => {
           </h1>
 
           <p className="text-xl text-[#151616]/70 mb-6 max-w-2xl mx-auto">
-            Our advanced AI models analyze every frame of your videos to detect deepfakes with high accuracy. Share and verify content with confidence in our trusted community.
+            Our advanced models analyze every frame of your videos to detect deepfakes with high accuracy. Share and verify content with confidence in our trusted community.
           </p>
 
           <div className="flex gap-4 justify-center mb-16">
