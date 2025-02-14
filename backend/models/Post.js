@@ -56,7 +56,14 @@ const postSchema = new mongoose.Schema({
       confidence: Number,
       is_fake: Boolean,
       frame_path: String
-    }]
+    }],
+    summary: {
+      status: String,  // "REAL" or "FAKE"
+      confidence_percentage: Number,
+      total_frames: Number,
+      real_frames: Number,
+      fake_frames: Number
+    }
   }
 }, { 
   timestamps: true,

@@ -62,3 +62,6 @@ backend/flask_server/uploads/*
 backend/flask_server/frames/
 backend/flask_server/frames/*   
 
+backend/flask_server_2/models/*
+backend/flask_server_2/uploads/*
+backend/flask_server_2/frames/*

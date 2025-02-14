@@ -39,7 +39,14 @@ router.get('/', async (req, res) => {
         username: post.creator.username
       },
       likes_count: post.likes.length,
-      comments_count: post.comments.length
+      comments_count: post.comments.length,
+      analysis_status: post.analysis_status,
+      deepfake_analysis: post.deepfake_analysis ? {
+        is_fake: post.deepfake_analysis.is_fake,
+        confidence: post.deepfake_analysis.confidence,
+        frames_analysis: post.deepfake_analysis.frames_analysis,
+        summary: post.deepfake_analysis.summary
+      } : null
     }));
 
     console.log('Transformed posts:', transformedPosts); // Add this for debugging
@@ -71,7 +78,8 @@ router.get('/:id', authMiddleware, async (req, res) => {
       deepfake_analysis: post.deepfake_analysis ? {
         is_fake: post.deepfake_analysis.is_fake,
         confidence: post.deepfake_analysis.confidence,
-        frames_analysis: post.deepfake_analysis.frames_analysis
+        frames_analysis: post.deepfake_analysis.frames_analysis,
+        summary: post.deepfake_analysis.summary
       } : null,
       profiles: {
         username: post.creator.username
@@ -144,12 +152,31 @@ router.post('/', authMiddleware, async (req, res) => {
           const analysisResult = await detector.analyze_video(uploadPath);
           console.log('Analysis result:', analysisResult);
 
+          // Calculate summary
+          const totalFrames = analysisResult.frames_analysis.length;
+          const fakeFrames = analysisResult.frames_analysis.filter(frame => frame.is_fake).length;
+          const realFrames = totalFrames - fakeFrames;
+          const averageConfidence = analysisResult.frames_analysis.reduce((sum, frame) => sum + frame.confidence, 0) / totalFrames;
+          const confidencePercentage = Math.round((1 - averageConfidence) * 100);
+          const isFake = fakeFrames > realFrames;
+
+          const summary = {
+            status: isFake ? "FAKE" : "REAL",
+            confidence_percentage: confidencePercentage,
+            total_frames: totalFrames,
+            real_frames: realFrames,
+            fake_frames: fakeFrames
+          };
+
           const updatedPost = await Post.findByIdAndUpdate(
             post._id,
             {
               $set: {
                 deepfake_analysis: {
-                  frames_analysis: analysisResult.frames_analysis
+                  frames_analysis: analysisResult.frames_analysis,
+                  confidence: averageConfidence,
+                  is_fake: isFake,
+                  summary: summary
                 },
                 analysis_status: 'completed'
               }
@@ -157,7 +184,7 @@ router.post('/', authMiddleware, async (req, res) => {
             { new: true }
           );
           
-          console.log('Updated post with frames:', updatedPost);
+          console.log('Updated post with analysis:', updatedPost);
         } catch (error) {
           console.error('Error processing video:', error);
           await Post.findByIdAndUpdate(post._id, {
@@ -285,7 +312,23 @@ router.post('/analyze/:postId', authMiddleware, async (req, res) => {
       frames_dir: framesDir
     });
 
-    // Update post with analysis results
+    // Calculate summary with corrected confidence
+    const totalFrames = response.data.total_frames;
+    const fakeFrames = response.data.fake_frames_count;
+    const realFrames = response.data.real_frames_count;
+    
+    // Calculate confidence based on the ratio of fake frames
+    const confidencePercentage = Math.round((fakeFrames / totalFrames) * 100);
+
+    const summary = {
+      status: response.data.is_fake ? "FAKE" : "REAL",
+      confidence_percentage: confidencePercentage,
+      total_frames: totalFrames,
+      real_frames: realFrames,
+      fake_frames: fakeFrames
+    };
+
+    // Update post with analysis results and summary
     const updatedPost = await Post.findByIdAndUpdate(
       post._id,
       {
@@ -293,7 +336,8 @@ router.post('/analyze/:postId', authMiddleware, async (req, res) => {
           deepfake_analysis: {
             frames_analysis: response.data.frames_analysis,
             confidence: response.data.confidence,
-            is_fake: response.data.is_fake
+            is_fake: response.data.is_fake,
+            summary: summary
           },
           analysis_status: 'completed'
         }

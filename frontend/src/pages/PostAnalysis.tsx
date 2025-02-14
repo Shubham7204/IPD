@@ -21,6 +21,13 @@ interface Post {
     frames_analysis: Frame[];
     confidence: number;
     is_fake: boolean;
+    summary: {
+      status: string;
+      confidence_percentage: number;
+      total_frames: number;
+      real_frames: number;
+      fake_frames: number;
+    };
   };
 }
 
@@ -129,31 +136,22 @@ export default function PostAnalysis() {
           </div>
           <div className="bg-white p-6 rounded-lg shadow-lg">
             <h2 className="text-2xl font-bold mb-4">Analysis Summary</h2>
-            {post.deepfake_analysis ? (
-              <>
-                {(() => {
-                  const status = determineVideoStatus(post.deepfake_analysis.frames_analysis);
-                  return (
-                    <>
-                      <div className={`text-2xl font-bold mb-4 ${
-                        status.isReal ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {status.isReal ? 'VIDEO IS REAL' : 'VIDEO IS FAKE'}
-                      </div>
-                      <div className="text-lg mb-2">
-                        Overall Confidence: {(status.confidence * 100).toFixed(1)}%
-                      </div>
-                      <div className="text-gray-600 space-y-1">
-                        <div>Total Frames: {status.totalFrames}</div>
-                        <div>Real Frames: {status.realCount}</div>
-                        <div>Fake Frames: {status.fakeCount}</div>
-                      </div>
-                    </>
-                  );
-                })()}
-              </>
-            ) : (
-              <div className="text-yellow-600">Analysis not available</div>
+            {post.deepfake_analysis?.summary && (
+              <div className="space-y-4">
+                <div className={`text-2xl font-bold mb-4 ${
+                  post.deepfake_analysis.summary.status === 'REAL' ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  VIDEO IS {post.deepfake_analysis.summary.status}
+                </div>
+                <div className="text-lg mb-2">
+                  Overall Confidence: {post.deepfake_analysis.summary.confidence_percentage}%
+                </div>
+                <div className="text-gray-600 space-y-1">
+                  <div>Total Frames: {post.deepfake_analysis.summary.total_frames}</div>
+                  <div>Real Frames: {post.deepfake_analysis.summary.real_frames}</div>
+                  <div>Fake Frames: {post.deepfake_analysis.summary.fake_frames}</div>
+                </div>
+              </div>
             )}
           </div>
         </div>

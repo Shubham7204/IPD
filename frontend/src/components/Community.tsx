@@ -26,6 +26,13 @@ interface Post {
       is_fake: boolean;
       frame_path: string;
     }[];
+    summary?: {
+      status: string;
+      confidence_percentage: number;
+      total_frames: number;
+      real_frames: number;
+      fake_frames: number;
+    };
   };
 }
 
@@ -77,6 +84,25 @@ const PostCard: React.FC<{ post: Post; index: number }> = ({ post, index }) => {
             <div className="absolute top-4 right-4 text-sm font-bold text-white bg-[#151616]/50 px-2 py-1 rounded-full">
               {new Date(post.created_at).toLocaleDateString()}
             </div>
+            
+            {post.media_type === 'video' && post.analysis_status === 'completed' && post.deepfake_analysis?.summary && (
+              <div
+                className={`absolute bottom-4 left-4 px-3 py-1.5 rounded-full flex items-center gap-2 text-sm font-bold ${
+                  post.deepfake_analysis.summary.status === 'REAL' 
+                    ? 'bg-green-500 text-white' 
+                    : 'bg-red-500 text-white'
+                }`}
+              >
+                {post.deepfake_analysis.summary.status === 'REAL' ? 'REAL' : 'DEEPFAKE'}
+              </div>
+            )}
+            
+            {post.media_type === 'video' && post.analysis_status === 'processing' && (
+              <div className="absolute bottom-4 left-4 px-3 py-1.5 rounded-full bg-yellow-500 text-white flex items-center gap-2 text-sm font-bold">
+                <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent"></div>
+                <span>Analyzing...</span>
+              </div>
+            )}
           </div>
           
           <div className="p-6">
