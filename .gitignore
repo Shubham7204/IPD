@@ -65,3 +65,4 @@ backend/flask_server/frames/*
 backend/flask_server_2/models/*
 backend/flask_server_2/uploads/*
 backend/flask_server_2/frames/*
+backend/flask_server_2/as_model_0.837.pt

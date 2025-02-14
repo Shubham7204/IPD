@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { FrameErrorBoundary } from '../components/FrameErrorBoundary';
 
 interface Frame {
   frame: string;
@@ -62,35 +63,49 @@ export default function PostAnalysis() {
     if (!post?.deepfake_analysis?.frames_analysis) return null;
 
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-        {post.deepfake_analysis.frames_analysis.map((frame, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden"
-          >
-            <img 
-              src={`${API_URL}${frame.frame_path}`}
-              alt={`Frame ${index + 1}`}
-              className="absolute inset-0 w-full h-full object-cover"
-              onError={(e) => {
-                console.error(`Error loading frame: ${frame.frame_path}`);
-                const target = e.target as HTMLImageElement;
-                target.src = 'placeholder.jpg'; // Add a placeholder image
-              }}
-            />
-            <div className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-bold ${
-              frame.is_fake 
-                ? 'bg-red-100 text-red-800' 
-                : 'bg-green-100 text-green-800'
-            }`}>
-              {(frame.confidence * 100).toFixed(0)}%
-            </div>
-          </motion.div>
-        ))}
-      </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {post.deepfake_analysis.frames_analysis.map((frame, index) => {
+                // Use the frame_path directly since it now includes the full path
+                const frameUrl = `http://localhost:5000${frame.frame_path}`;
+                console.log(`Loading frame: ${frameUrl}`); // Debug log
+                
+                return (
+                    <FrameErrorBoundary key={index}>
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden"
+                        >
+                            <div className="absolute inset-0">
+                                <img 
+                                    src={frameUrl}
+                                    alt={`Frame ${index + 1}`}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        console.error(`Error loading frame: ${frameUrl}`);
+                                        const target = e.target as HTMLImageElement;
+                                        target.style.display = 'none';
+                                        const placeholder = document.createElement('div');
+                                        placeholder.className = 'absolute inset-0 flex items-center justify-center bg-gray-100';
+                                        placeholder.innerHTML = '<div class="text-gray-400">Failed to load</div>';
+                                        target.parentNode?.appendChild(placeholder);
+                                    }}
+                                    loading="lazy"
+                                />
+                            </div>
+                            <div className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-bold ${
+                                frame.is_fake 
+                                    ? 'bg-red-500 text-white' 
+                                    : 'bg-green-500 text-white'
+                            }`}>
+                                {frame.is_fake ? 'FAKE' : 'REAL'}
+                            </div>
+                        </motion.div>
+                    </FrameErrorBoundary>
+                );
+            })}
+        </div>
     );
   };
 
