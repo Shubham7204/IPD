@@ -36,7 +36,7 @@ const NewsletterInput = () => {
       onHoverEnd={() => setIsHovered(false)}>
       <input
         type="email"
-        placeholder="Enter your email"
+        placeholder="Stay updated with latest AI detection features"
         className="w-full px-4 py-3 rounded-l-xl border-2 border-r-0 border-[#151616] 
           focus:outline-none focus:ring-2 ring-[#D6F32F]"
       />
@@ -84,19 +84,16 @@ const Footer = () => {
       <div className="container mx-auto px-6">
         {/* Newsletter Section */}
         <motion.div
-          className="max-w-2xl mx-auto text-center mb-20"
           initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}>
-          <div
-            className="inline-block bg-[#D6F32F] px-4 py-1 rounded-full border-2 border-[#151616] 
-            shadow-[4px_4px_0px_0px_#151616] mb-4">
-            <Star className="w-5 h-5 inline-block" /> Join Our Community
-          </div>
-          <h2 className="text-2xl font-bold mb-4">
-            Make an Impact with GreenGauge
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center max-w-xl mx-auto mb-20"
+        >
+          <h2 className="text-3xl font-bold mb-4">
+            Join the Fight Against Deepfakes
           </h2>
           <p className="text-[#151616]/70 mb-6">
-          Make your cart count - for the planet
+            Stay updated with the latest in AI-powered deepfake detection
           </p>
           <NewsletterInput />
         </motion.div>
@@ -113,10 +110,10 @@ const Footer = () => {
                 border-2 border-[#151616] shadow-[4px_4px_0px_0px_#151616]">
                 <Bot className="w-7 h-7 text-[#151616]" />
               </div>
-              <h2 className="text-3xl font-bold">GreenGauge</h2>
+              <h2 className="text-3xl font-bold">DeepSeek</h2>
             </motion.div>
             <p className="text-[#151616]/70 max-w-md">
-              Empower your choices, empower the planet. Every time you make a sustainable purchase, you're not just shopping — you're creating a positive impact on the world. Your decisions today shape a better tomorrow for everyone.
+              Empowering truth in the digital age. Our AI-powered platform helps you detect and combat deepfakes, ensuring authenticity in online content.
             </p>
             <div className="flex gap-4">
               <SocialButton icon={Twitter} label="Twitter" href="#" />
@@ -128,12 +125,12 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div className="space-y-4">
-            <h3 className="font-bold text-lg">Navigation</h3>
+            <h3 className="font-bold text-lg">Features</h3>
             <div className="space-y-3">
-              <FooterLink href="#">Features</FooterLink>
-              <FooterLink href="#">Place Holder</FooterLink>
-              <FooterLink href="#">Place holder</FooterLink>
-              <FooterLink href="#">Place Holder</FooterLink>
+              <FooterLink href="#">Vision Transformer</FooterLink>
+              <FooterLink href="#">CNN-LSTM Analysis</FooterLink>
+              <FooterLink href="#">Frame Detection</FooterLink>
+              <FooterLink href="#">Real-time Results</FooterLink>
             </div>
           </div>
 
@@ -141,10 +138,10 @@ const Footer = () => {
           <div className="space-y-4">
             <h3 className="font-bold text-lg">Resources</h3>
             <div className="space-y-3">
-              <FooterLink href="#">Help Center</FooterLink>
+              <FooterLink href="#">Documentation</FooterLink>
               <FooterLink href="#">Privacy Policy</FooterLink>
               <FooterLink href="#">Terms of Use</FooterLink>
-              <FooterLink href="#">Contact Support</FooterLink>
+              <FooterLink href="#">API Access</FooterLink>
             </div>
           </div>
         </div>
@@ -154,7 +151,7 @@ const Footer = () => {
           className="border-t-2 border-[#151616]/10 py-6 flex flex-col md:flex-row 
           justify-between items-center gap-4">
           <div className="flex items-center gap-2 text-sm text-[#151616]/70">
-            <span>© 2025 GreenGauge. All rights reserved.</span>
+            <span>© 2024 DeepSeek. All rights reserved.</span>
             <span className="flex items-center gap-1">
               Made with <Heart className="w-4 h-4 text-[#D6F32F]" /> by Team
               DedSec
@@ -166,7 +163,7 @@ const Footer = () => {
               border-[#151616] shadow-[4px_4px_0px_0px_#151616]"
             whileHover={{ y: -2 }}>
             <span className="w-2 h-2 bg-[#D6F32F] rounded-full animate-pulse" />
-            <span className="text-sm font-medium">Support Available 24/7</span>
+            <span className="text-sm font-medium">AI Detection Active 24/7</span>
           </motion.div>
         </div>
       </div>

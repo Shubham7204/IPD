@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import {
-  Sparkles,
-  Moon,
-  Flower,
-  Star,
+  Scan,
+  Brain,
+  Video,
+  Shield,
+  BarChart2,
+  BadgeCheck,
   ChevronRight,
-  ScrollText,
-  Gem,
-  BrainCircuit,
+  Sparkles,
 } from "lucide-react";
 
 // Feature colors for spiritual theme
@@ -115,40 +115,40 @@ const FloatingElement = ({ className, color, delay = 0 }) => (
 const FeatureSection = () => {
   const features = [
     {
-      icon: ScrollText,
-      title: "Pace holder",
+      icon: Brain,
+      title: "Vision Transformer",
       description:
-        "Lorum Ipssum Lorum Ipssum Lorum Ipssum Lorum Ipssum Lorum Ipssum Lorum Ipssums",
+        "State-of-the-art Vision Transformer model that analyzes spatial relationships between video frames to detect manipulation patterns.",
     },
     {
-      icon: Star,
-      title: "Pace holder",
+      icon: Scan,
+      title: "CNN-LSTM Analysis",
       description:
-        "Lorum Ipssum Lorum Ipssum Lorum Ipssum Lorum Ipssum Lorum Ipssum Lorum Ipssums",
+        "Dual-model approach combining CNN-LSTM architecture to analyze temporal inconsistencies and detect sophisticated deepfake patterns.",
     },
     {
-      icon: Gem,
-      title: "Pace holder",
+      icon: Video,
+      title: "Frame-by-Frame Detection",
       description:
-        "Lorum Ipssum Lorum Ipssum Lorum Ipssum Lorum Ipssum Lorum Ipssum Lorum Ipssums",
+        "Detailed frame-by-frame analysis providing comprehensive insights into potential manipulations within your videos.",
     },
     {
-      icon: Flower,
-      title: "Pace holder",
+      icon: Shield,
+      title: "Real-Time Results",
       description:
-        "Lorum Ipssum Lorum Ipssum Lorum Ipssum Lorum Ipssum Lorum Ipssum Lorum Ipssums",
+        "Get instant analysis results with confidence scores and clear indicators showing which parts of the video may be manipulated.",
     },
     {
-      icon: Moon,
-      title: "Place Holder",
+      icon: BadgeCheck,
+      title: "Verification Badges",
       description:
-        "Discover meditation techniques and wellness practices aligned with your astrological profile for optimal spiritual and physical health.",
+        "Trusted verification system that provides clear real/fake badges, helping maintain authenticity in our community.",
     },
     {
-      icon: BrainCircuit,
-      title: "Place Holder",
+      icon: BarChart2,
+      title: "Advanced Metrics",
       description:
-        "Lorum Ipssum Lorum Ipssum Lorum Ipssum Lorum Ipssum Lorum Ipssum Lorum Ipssums",
+        "Detailed metrics including confidence percentages, frame counts, and comprehensive analysis summaries for each video.",
     },
   ];
 
@@ -175,15 +175,16 @@ const FeatureSection = () => {
         delay={1}
       />
 
-      <div className="container mx-auto px-6 relative">
+      <div className="container mx-auto px-6 relative z-10">
         <div className="text-center mb-20">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="inline-flex items-center gap-2 bg-[#151616] text-white rounded-full px-4 py-2 mb-4">
+            className="inline-flex items-center gap-2 bg-[#151616] text-white rounded-full px-4 py-2 mb-4"
+          >
             <Sparkles className="w-4 h-4 text-[#D6F32F]" />
-            <span className="text-sm font-medium">Commit to it!</span>
+            <span className="text-sm font-medium">Advanced Detection Features</span>
           </motion.div>
 
           <motion.h2
@@ -191,13 +192,15 @@ const FeatureSection = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.2 }}
-            className="text-4xl md:text-5xl font-black text-[#151616] mb-6">
-            Measure Your Impact
+            className="text-4xl md:text-5xl font-black text-[#151616] mb-6"
+          >
+            Comprehensive Analysis
             <span className="inline-block ml-2">
               <motion.div
                 animate={{ rotate: [0, 10, 0] }}
                 transition={{ duration: 2, repeat: Infinity }}
-                className="inline-block">
+                className="inline-block"
+              >
                 ✨
               </motion.div>
             </span>
@@ -208,8 +211,9 @@ const FeatureSection = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.3 }}
-            className="text-xl text-[#151616]/70 max-w-2xl mx-auto">
-            Experience a uniqe blend of eco-friendliness and gamification
+            className="text-xl text-[#151616]/70 max-w-2xl mx-auto"
+          >
+            Cutting-edge AI technology combined with user-friendly features for reliable deepfake detection
           </motion.p>
         </div>
 
@@ -218,7 +222,8 @@ const FeatureSection = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ delay: 0.4 }}>
+          transition={{ delay: 0.4 }}
+        >
           {features.map((feature, index) => (
             <FeatureCard key={index} feature={feature} index={index} />
           ))}
@@ -229,12 +234,14 @@ const FeatureSection = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ delay: 0.5 }}>
+          transition={{ delay: 0.5 }}
+        >
           <button className="group bg-[#D6F32F] px-8 py-4 rounded-2xl text-xl font-bold text-[#151616] border-2 border-[#151616] shadow-[4px_4px_0px_0px_#151616] hover:shadow-[2px_2px_0px_0px_#151616] hover:translate-y-[2px] hover:translate-x-[2px] transition-all duration-200 flex items-center gap-2 mx-auto">
-            Start Your Eco Friendly Journey
+            Start Detecting Now
             <motion.div
               animate={{ x: [0, 5, 0] }}
-              transition={{ duration: 1, repeat: Infinity }}>
+              transition={{ duration: 1, repeat: Infinity }}
+            >
               <ChevronRight className="w-5 h-5" />
             </motion.div>
           </button>
