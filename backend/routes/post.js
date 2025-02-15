@@ -8,6 +8,7 @@ const path = require('path');
 const DeepfakeDetector = require('../services/deepfakeDetector');
 const detector = new DeepfakeDetector();
 const axios = require('axios');
+const OldModelAnalysis = require('../models/OldModelAnalysis');
 
 // Configure file upload middleware with file size limit
 router.use(fileUpload({
@@ -348,6 +349,107 @@ router.post('/analyze/:postId', authMiddleware, async (req, res) => {
     res.json(updatedPost);
   } catch (error) {
     console.error('Error analyzing frames:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Add this new route
+router.post('/analyze-old-model/:postId', authMiddleware, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.postId);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    // Check if analysis already exists
+    let oldAnalysis = await OldModelAnalysis.findOne({ post_id: post._id });
+    if (oldAnalysis) {
+      return res.json(oldAnalysis);
+    }
+
+    // Get video path and frames directory name
+    const videoFileName = path.basename(post.media_url);
+    const videoPath = path.join(__dirname, '..', 'uploads', videoFileName);
+    const framesDir = `frames_${path.parse(videoFileName).name.replace(/[\\\/]/g, '')}`;
+
+    console.log('Video path:', videoPath);
+    console.log('Frames directory:', framesDir);
+
+    try {
+      // First, extract frames using flask_server_2
+      const extractResponse = await axios.post('http://localhost:5000/extract-frames', {
+        video_path: videoPath,
+        frames_dir: framesDir
+      });
+
+      if (!extractResponse.data.success) {
+        throw new Error('Failed to extract frames');
+      }
+
+      // Now call old model Flask server (on port 5001) for analysis
+      const response = await axios.post('http://localhost:5001/analyze-frames', {
+        frames_dir: framesDir
+      });
+
+      console.log('Flask server response:', response.data);
+
+      if (!response.data || !response.data.frames_analysis) {
+        throw new Error('Invalid response from Flask server');
+      }
+
+      // Calculate summary
+      const totalFrames = response.data.total_frames || 0;
+      const fakeFrames = response.data.fake_frames_count || 0;
+      const realFrames = response.data.real_frames_count || 0;
+      const confidencePercentage = Math.round((fakeFrames / totalFrames) * 100);
+
+      const summary = {
+        status: response.data.is_fake ? "FAKE" : "REAL",
+        confidence_percentage: confidencePercentage,
+        total_frames: totalFrames,
+        real_frames: realFrames,
+        fake_frames: fakeFrames
+      };
+
+      // Save old model analysis
+      oldAnalysis = await OldModelAnalysis.create({
+        post_id: post._id,
+        frames_analysis: response.data.frames_analysis,
+        confidence: response.data.confidence,
+        is_fake: response.data.is_fake,
+        summary: summary
+      });
+
+      return res.json(oldAnalysis);
+
+    } catch (flaskError) {
+      console.error('Flask server error:', flaskError);
+      return res.status(500).json({ 
+        message: 'Flask server error', 
+        details: flaskError.message,
+        frames_dir: framesDir 
+      });
+    }
+
+  } catch (error) {
+    console.error('Error in analyze-old-model:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      details: error.message 
+    });
+  }
+});
+
+// Add a route to get old model analysis
+router.get('/old-model-analysis/:postId', authMiddleware, async (req, res) => {
+  try {
+    const analysis = await OldModelAnalysis.findOne({ post_id: req.params.postId });
+    if (!analysis) {
+      return res.status(404).json({ message: 'Analysis not found' });
+    }
+    res.json(analysis);
+  } catch (error) {
+    console.error('Error fetching old model analysis:', error);
     res.status(500).json({ message: error.message });
   }
 });

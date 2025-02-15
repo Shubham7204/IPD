@@ -9,6 +9,7 @@ import os
 from werkzeug.utils import secure_filename
 from flask_cors import CORS
 from datetime import datetime
+import shutil
 
 app = Flask(__name__)
 # Enable CORS for all routes
@@ -212,6 +213,35 @@ def serve_frame(filename):
     except Exception as e:
         print(f"Error serving frame {filename}: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/extract-frames', methods=['POST'])
+def extract_frames_endpoint():
+    try:
+        data = request.get_json()
+        if not data or 'video_path' not in data or 'frames_dir' not in data:
+            return jsonify({'error': 'Missing video_path or frames_dir'}), 400
+
+        video_path = data['video_path']
+        frames_dir = data['frames_dir']
+
+        # Create frames directory
+        frames_dir_path = os.path.join('frames', frames_dir)
+        
+        # Extract frames
+        frames = extract_frames(video_path, frames_dir_path)
+
+        return jsonify({
+            'success': True,
+            'message': 'Frames extracted successfully',
+            'frames_count': len(frames)
+        })
+
+    except Exception as e:
+        print(f"Error extracting frames: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 if __name__ == '__main__':
     if load_model():

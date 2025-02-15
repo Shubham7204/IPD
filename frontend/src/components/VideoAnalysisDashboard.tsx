@@ -132,12 +132,14 @@ export default function VideoAnalysisDashboard() {
             <h3 className="font-semibold mb-2">{post.title}</h3>
             
             {post.analysis_status === 'none' ? (
-              <button
-                onClick={() => handleAnalyze(post.id)}
-                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition-colors w-full"
-              >
-                Analyze Video
-              </button>
+              <div className="space-y-2">
+                <button
+                  onClick={() => handleAnalyze(post.id)}
+                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition-colors w-full mb-2"
+                >
+                  Analyze Video
+                </button>
+              </div>
             ) : post.analysis_status === 'processing' ? (
               <div className="flex items-center justify-center space-x-2 py-2">
                 <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>

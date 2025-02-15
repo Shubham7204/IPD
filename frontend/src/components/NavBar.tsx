@@ -84,7 +84,7 @@ const Navbar = () => {
                 <div className="w-10 h-10 bg-[#D6F32F] rounded-lg flex items-center justify-center border-2 border-[#151616] shadow-[2px_2px_0px_0px_#151616]">
                   <Bot className="w-6 h-6 text-[#151616]" />
                 </div>
-                <span className="font-bold text-lg">DeepSeek</span>
+                <span className="font-bold text-lg">DeepShield</span>
               </Link>
             </motion.div>
 

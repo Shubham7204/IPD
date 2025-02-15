@@ -9,6 +9,7 @@ import PostDetails from './components/PostDetails';
 import Community from './components/Community';
 import PostAnalysis from './pages/PostAnalysis';
 import Home from './pages/Home';
+import OldModelAnalysis from './pages/OldModelAnalysis';
 
 const App = () => {
   const isLoggedIn = !!localStorage.getItem('token');
@@ -33,6 +34,7 @@ const App = () => {
             <Route path="/posts/:id" element={<PostDetails />} />
             <Route path="/community" element={<Community />} />
             <Route path="/posts/:postId/analysis" element={<PostAnalysis />} />
+            <Route path="/old-model-analysis/:postId" element={<OldModelAnalysis />} />
           </Routes>
         </main>
         <Footer />

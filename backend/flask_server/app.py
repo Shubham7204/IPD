@@ -188,35 +188,50 @@ def analyze_video():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/analyze-frames', methods=['POST'])
-def analyze_frames_route():
+def analyze_frames():
     try:
         data = request.get_json()
-        frames_dir = data.get('frames_dir')
-        
-        if not frames_dir:
+        if not data or 'frames_dir' not in data:
             return jsonify({'error': 'No frames directory provided'}), 400
             
-        full_frames_dir = os.path.join(FRAMES_FOLDER, frames_dir)
+        frames_dir = data['frames_dir']
+        print(f"Analyzing frames from directory: {frames_dir}")
+        
+        # Look in flask_server_2's frames directory
+        full_frames_dir = os.path.join('..', 'flask_server_2', 'frames', frames_dir)
+        print(f"Looking for frames in: {os.path.abspath(full_frames_dir)}")
+        
         if not os.path.exists(full_frames_dir):
-            return jsonify({'error': 'Frames directory not found'}), 404
+            error_msg = f"Frames directory not found at: {os.path.abspath(full_frames_dir)}"
+            print(error_msg)
+            return jsonify({'error': error_msg}), 404
             
-        total_confidence = 0
+        print(f"Found frames directory at: {full_frames_dir}")
+            
+        # Initialize analysis variables
         frames_analysis = []
+        total_confidence = 0
+        
+        # List and sort frame files
+        frame_files = sorted([f for f in os.listdir(full_frames_dir) if f.endswith('.jpg')])
+        print(f"Found {len(frame_files)} frame files")
         
         # Analyze each frame in the directory
-        for frame_name in sorted(os.listdir(full_frames_dir)):
-            if frame_name.endswith('.jpg'):
-                frame_path = os.path.join(full_frames_dir, frame_name)
-                confidence, is_fake = analyze_frame(frame_path)
-                total_confidence += confidence
-                
-                frame_url = f'/uploads/frames/{frames_dir}/{frame_name}'
-                frames_analysis.append({
-                    'frame': frame_name,
-                    'frame_path': frame_url,
-                    'confidence': confidence,
-                    'is_fake': is_fake
-                })
+        for frame_name in frame_files:
+            frame_path = os.path.join(full_frames_dir, frame_name)
+            print(f"Analyzing frame: {frame_path}")
+            
+            confidence, is_fake = analyze_frame(frame_path)
+            total_confidence += confidence
+            
+            # Use the frames directory path for the URL
+            frame_url = f'/uploads/frames/{frames_dir}/{frame_name}'
+            frames_analysis.append({
+                'frame': frame_name,
+                'frame_path': frame_url,
+                'confidence': confidence,
+                'is_fake': is_fake
+            })
         
         # Calculate overall results
         num_frames = len(frames_analysis)
@@ -224,11 +239,12 @@ def analyze_frames_route():
             average_confidence = total_confidence / num_frames
             fake_frames = sum(1 for frame in frames_analysis if frame['is_fake'])
             real_frames = num_frames - fake_frames
-            # If there are more fake frames than real frames, the video is fake
             is_fake = fake_frames > real_frames
         else:
             average_confidence = 0
             is_fake = False
+            fake_frames = 0
+            real_frames = 0
         
         result = {
             'frames_analysis': frames_analysis,
@@ -244,7 +260,7 @@ def analyze_frames_route():
         return jsonify(result)
         
     except Exception as e:
-        print("Error during analysis:", str(e))
+        print(f"Error during frame analysis: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/frames/<path:filename>')
@@ -252,14 +268,14 @@ def serve_frame(filename):
     print(f"Serving frame: {filename}")
     frame_dir = os.path.dirname(filename)
     frame_name = os.path.basename(filename)
-    frame_path = os.path.join(FRAMES_FOLDER, frame_dir)
+    frame_path = os.path.join('..', 'flask_server_2', 'frames', frame_dir)
     print(f"Full path: {os.path.join(frame_path, frame_name)}")
     return send_from_directory(frame_path, frame_name)
 
 # Load model when starting the server
 if __name__ == '__main__':
     if load_model():
-        print("Starting server with model loaded")
-        app.run(port=5000)
+        print("Starting server with CNN+LSTM model loaded")
+        app.run(host='0.0.0.0', port=5001, debug=True)  # Changed port to 5001
     else:
         print("Failed to load model. Please ensure the model file exists.") 

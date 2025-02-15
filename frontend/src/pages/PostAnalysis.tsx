@@ -45,6 +45,7 @@ export default function PostAnalysis() {
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [isLoadingOldModel, setIsLoadingOldModel] = useState(false);
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -106,6 +107,41 @@ export default function PostAnalysis() {
       totalFrames: frames.length,
       confidence: averageConfidence
     };
+  };
+
+  const handleOldModelAnalysis = async () => {
+    try {
+      setIsLoadingOldModel(true);
+      const response = await fetch(`${API_URL}/api/posts/analyze-old-model/${postId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Analysis failed');
+      }
+      
+      const data = await response.json();
+      
+      if (!data || !data.frames_analysis) {
+        throw new Error('Invalid analysis data received');
+      }
+
+      // Store the analysis result in localStorage for the new page
+      localStorage.setItem(`oldModelAnalysis_${postId}`, JSON.stringify(data));
+      
+      // Open new window with results
+      window.open(`/old-model-analysis/${postId}`, '_blank');
+    } catch (error) {
+      console.error('Error:', error);
+      // Add user-friendly error message
+      alert(`Analysis failed: ${error.message}. Please ensure both Flask servers are running.`);
+    } finally {
+      setIsLoadingOldModel(false);
+    }
   };
 
   if (isLoading) {
@@ -187,7 +223,7 @@ export default function PostAnalysis() {
           </div>
 
           {/* Analysis Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -240,6 +276,39 @@ export default function PostAnalysis() {
                 {status.realCount}/{status.totalFrames}
                 <span className="text-base font-normal text-[#151616]/70 ml-2">real frames</span>
               </p>
+            </motion.div>
+
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.4 }}
+              className="p-6 rounded-xl border-2 border-[#151616] bg-white"
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <Shield className="w-6 h-6 text-[#151616]" />
+                <h3 className="font-bold">Old Model Analysis</h3>
+              </div>
+              <div className="flex gap-4 mt-6">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleOldModelAnalysis}
+                  disabled={isLoadingOldModel}
+                  className="px-6 py-3 rounded-lg bg-[#D6F32F] border-2 border-[#151616] shadow-[4px_4px_0px_0px_#151616] hover:shadow-[1px_1px_0px_0px_#151616] hover:translate-x-[2px] hover:translate-y-[2px] transition-all text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isLoadingOldModel ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-[#151616] border-t-transparent rounded-full animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="w-4 h-4" />
+                      See Result (Old Model)
+                    </>
+                  )}
+                </motion.button>
+              </div>
             </motion.div>
           </div>
         </motion.div>
